@@ -11,8 +11,6 @@ import (
     "sync"
 )
 
-// curl -v "localhost:8081/api/download?os=linux&arch=amd64&p=github.com/caddy-dns/lego-deprecated" --output caddy
-
 func main() {
     var currentWork sync.Map
 
@@ -31,6 +29,14 @@ func main() {
         }
 
         outPath := fmt.Sprintf("/tmp/xcaddy-build-%s", idempotency)
+
+        if err := os.Remove(outPath); err != nil {
+            if !os.IsNotExist(err) {
+                log.Printf("%s: Unable to cleanup unexpected existing file: %s", idempotency, err)
+                return
+            }
+        }
+
         command := "xcaddy"
         cmdArgs := []string{"build", "--output", outPath}
 
@@ -42,14 +48,14 @@ func main() {
         goos := fmt.Sprintf("GOOS=%s", r.URL.Query().Get("os"))
         goarch := fmt.Sprintf("GOARCH=%s", r.URL.Query().Get("arch"))
 
-        fmt.Printf("%s: Running command '%s' with args: %s\n", idempotency, command, cmdArgs)
-        fmt.Printf("%s: Applying env vars: %s %s\n", idempotency, goos, goarch)
+        log.Printf("%s: Running command '%s' with args: %s", idempotency, command, cmdArgs)
+        log.Printf("%s: Applying env vars: %s %s", idempotency, goos, goarch)
 
         cmd := exec.Command(command, cmdArgs...)
         cmd.Env = append(os.Environ(), goos, goarch)
         out, err := cmd.Output()
 
-        fmt.Printf("%s: Command output: %s\n", idempotency, out)
+        log.Printf("%s: Command output: %s", idempotency, out)
 
         if err != nil {
             w.WriteHeader(http.StatusInternalServerError)
@@ -57,14 +63,14 @@ func main() {
         } else {
             fileBytes, err := ioutil.ReadFile(outPath)
             if err != nil {
-                fmt.Printf("%s: Unable to read built file: %s", idempotency, err)
+                log.Printf("%s: Unable to read built file: %s", idempotency, err)
 
                 w.WriteHeader(http.StatusInternalServerError)
                 fmt.Fprintf(w, "500 - Build failed for %s!", idempotency)
 
                 e := os.Remove(outPath)
                 if e != nil {
-                    fmt.Printf("%s: Unable to cleanup built file: %s", idempotency, err)
+                    log.Printf("%s: Unable to cleanup built file: %s", idempotency, err)
                     return
                 }
 
@@ -75,13 +81,17 @@ func main() {
 
             w.WriteHeader(http.StatusOK)
             w.Header().Set("Content-Type", "application/octet-stream")
-            w.Write(fileBytes)
+
+            if _, err := w.Write(fileBytes); err != nil {
+                log.Printf("%s: Writing file to client failed: %v", idempotency, err)
+            }
         }
 
-        e := os.Remove(outPath)
-        if e != nil {
-            fmt.Printf("%s: Unable to cleanup built file: %s", idempotency, err)
-            return
+        if err := os.Remove(outPath); err != nil {
+            if !os.IsNotExist(err) {
+                log.Printf("%s: Unable to cleanup built file: %s", idempotency, err)
+                return
+            }
         }
 
         currentWork.Delete(idempotency)
