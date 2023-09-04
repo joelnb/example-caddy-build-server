@@ -2,7 +2,6 @@ package main
 
 import (
     "fmt"
-    "io/ioutil"
     "log"
     "math/rand"
     "net/http"
@@ -82,7 +81,7 @@ func HandleXCaddyDownload(w http.ResponseWriter, r *http.Request) {
             }
         }()
 
-        fileBytes, err := ioutil.ReadFile(outPath)
+        fileBytes, err := os.ReadFile(outPath)
         if err != nil {
             log.Printf("%s: Unable to read built file: %s", idempotency, err)
             Write500(w)
