@@ -64,7 +64,7 @@ func HandleXCaddyDownload(w http.ResponseWriter, r *http.Request) {
 
     cmd := exec.Command(command, cmdArgs...)
     cmd.Env = append(os.Environ(), goos, goarch)
-    out, err := cmd.Output()
+    out, err := cmd.CombinedOutput()
 
     log.Printf("%s: Command output: %s", idempotency, out)
 
