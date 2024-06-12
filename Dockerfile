@@ -1,4 +1,4 @@
-FROM golang:alpine3.16 AS builder
+FROM golang:alpine3.20 AS builder
 
 ENV CGO_ENABLED=0
 RUN go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
