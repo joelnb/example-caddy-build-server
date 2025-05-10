@@ -22,7 +22,7 @@ func SafeRemove(path string) error {
 
 func Write500(w http.ResponseWriter) {
     w.WriteHeader(http.StatusInternalServerError)
-    fmt.Fprint(w, "500 - Error running build")
+    http.Error(w, "Error running build", http.StatusInternalServerError)
 }
 
 func HandleXCaddyDownload(w http.ResponseWriter, r *http.Request) {
@@ -34,10 +34,7 @@ func HandleXCaddyDownload(w http.ResponseWriter, r *http.Request) {
     _, loaded := currentWork.LoadOrStore(idempotency, true)
     if loaded {
         log.Printf("%s: Already doing work for this idempotency value!\n", idempotency)
-
-        w.WriteHeader(http.StatusBadRequest)
-        fmt.Fprintf(w, "400 - Build already running for %s!", idempotency)
-
+        http.Error(w, fmt.Sprintf("400 - Build already running for %s!", idempotency), http.StatusBadRequest)
         return
     }
 
