@@ -23,3 +23,4 @@ curl -v "localhost:8080/api/download?os=linux&arch=amd64&p=github.com/caddy-dns/
 ```
 
 If you wanted to share this between multiple machines then adding a reverse proxy with TLS termination would be recommended.
+
